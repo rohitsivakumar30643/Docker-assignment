@@ -1,0 +1,55 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: watertank-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - watertank-net
+
+  backend:
+    image: rohitsivakumar/docker-backend-2400030643:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: watertank-backend
+    ports:
+      - "5001:5001"
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/watertankdb
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - watertank-net
+
+  frontend:
+    image: rohitsivakumar/docker-frontend-2400030643:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: watertank-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: on-failure
+    networks:
+      - watertank-net
+
+volumes:
+  mysql_data:
+
+networks:
+  watertank-net:
